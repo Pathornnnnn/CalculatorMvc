@@ -1,0 +1,187 @@
+﻿@{
+    ViewData["Title"] = "iPhone-style Calculator AJAX & Fetch";
+}
+
+<style>
+    body {
+        font-family: 'Segoe UI', sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: #f3f3f3;
+        padding: 20px;
+    }
+
+    .calculator {
+        background: #000;
+        padding: 20px;
+        border-radius: 30px;
+        width: 320px;
+        margin-bottom: 40px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .display {
+        background: #1c1c1c;
+        color: white;
+        font-size: 2em;
+        text-align: right;
+        padding: 20px;
+        border-radius: 15px;
+        margin-bottom: 10px;
+        min-height: 60px;
+        word-wrap: break-word;
+    }
+
+    .buttons {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+    }
+
+    .btn {
+        padding: 20px;
+        font-size: 1.5em;
+        border: none;
+        border-radius: 50%;
+        background: #333;
+        color: white;
+        cursor: pointer;
+        transition: 0.1s;
+    }
+
+        .btn.operator {
+            background: orange;
+        }
+
+        .btn.double {
+            grid-column: span 2;
+            border-radius: 40px;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn.equal {
+            grid-column: span 4; /* ขยายสูง 2 แถว */
+            border-radius: 40px;
+            background: orange;
+            color: white;
+            font-size: 1.5em;
+            justify-content: end;
+        }
+
+    .calculator-title {
+        color: #000;
+        margin-bottom: 5px;
+        font-weight: bold;
+        text-align: center;
+    }
+</style>
+
+<!-- AJAX Calculator -->
+<h1>AJAX Calculator</h1>
+<div class="calculator">
+    <div class="calculator-title">AJAX Calculator</div>
+    <div id="ajaxDisplay" class="display">0</div>
+    <div class="buttons">
+        <button class="btn operator" onclick="ajaxClear()">C</button>
+        <button class="btn operator" onclick="ajaxBack()">⌫</button>
+        <button class="btn operator" onclick="ajaxAppend('%')">%</button>
+        <button class="btn operator" onclick="ajaxAppend('^')">^</button>
+        
+
+        <button class="btn" onclick="ajaxAppend('7')">7</button>
+        <button class="btn" onclick="ajaxAppend('8')">8</button>
+        <button class="btn" onclick="ajaxAppend('9')">9</button>
+        <button class="btn operator" onclick="ajaxAppend('/')">÷</button>
+
+        <button class="btn" onclick="ajaxAppend('4')">4</button>
+        <button class="btn" onclick="ajaxAppend('5')">5</button>
+        <button class="btn" onclick="ajaxAppend('6')">6</button>
+        <button class="btn operator" onclick="ajaxAppend('*')">×</button>
+
+        <button class="btn" onclick="ajaxAppend('1')">1</button>
+        <button class="btn" onclick="ajaxAppend('2')">2</button>
+        <button class="btn" onclick="ajaxAppend('3')">3</button>
+        <button class="btn operator" onclick="ajaxAppend('-')">−</button>
+
+        <button class="btn double" onclick="ajaxAppend('0')">0</button>
+        <button class="btn" onclick="ajaxAppend('.')">.</button>
+        <button class="btn operator" onclick="ajaxAppend('+')">+</button>
+        <button class="btn equal" onclick="ajaxEvaluate()">=</button>
+    </div>
+</div>
+
+<!-- Fetch Calculator -->
+<h1>Fetch Calculator</h1>
+<div class="calculator">
+    <div class="calculator-title">Fetch Calculator</div>
+    <div id="fetchDisplay" class="display">0</div>
+    <div class="buttons">
+        <button class="btn operator" onclick="fetchClear()">C</button>
+        <button class="btn operator" onclick="fetchBack()">⌫</button>
+        <button class="btn operator" onclick="fetchAppend('%')">%</button>
+        <button class="btn operator" onclick="fetchAppend('^')">^</button>
+
+        <button class="btn" onclick="fetchAppend('7')">7</button>
+        <button class="btn" onclick="fetchAppend('8')">8</button>
+        <button class="btn" onclick="fetchAppend('9')">9</button>
+        <button class="btn operator" onclick="fetchAppend('/')">÷</button>
+
+        <button class="btn" onclick="fetchAppend('4')">4</button>
+        <button class="btn" onclick="fetchAppend('5')">5</button>
+        <button class="btn" onclick="fetchAppend('6')">6</button>
+        <button class="btn operator" onclick="fetchAppend('*')">×</button>
+
+        <button class="btn" onclick="fetchAppend('1')">1</button>
+        <button class="btn" onclick="fetchAppend('2')">2</button>
+        <button class="btn" onclick="fetchAppend('3')">3</button>
+        <button class="btn operator" onclick="fetchAppend('-')">−</button>
+
+        <button class="btn double" onclick="fetchAppend('0')">0</button>
+        <button class="btn" onclick="fetchAppend('.')">.</button>
+        <button class="btn operator" onclick="fetchAppend('+')">+</button>
+        <button class="btn equal" onclick="fetchEvaluate()">=</button>
+    </div>
+</div>
+
+<script>
+    /* ===== AJAX Calculator ===== */
+    let ajaxCurrent = '';
+    function ajaxAppend(char) { ajaxCurrent += char; updateAjaxDisplay(); }
+    function ajaxClear() { ajaxCurrent = ''; updateAjaxDisplay(); }
+    function ajaxBack() { ajaxCurrent = ajaxCurrent.slice(0,-1); updateAjaxDisplay(); }
+    function updateAjaxDisplay() { document.getElementById('ajaxDisplay').innerText = ajaxCurrent || '0'; }
+    function ajaxEvaluate() {
+        if (!ajaxCurrent) return;
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", "/Calculator/EvaluateAjax", true);
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.onreadystatechange = function() {
+            if(xhr.readyState === 4 && xhr.status === 200){
+                let data = JSON.parse(xhr.responseText);
+                ajaxCurrent = data.result;
+                updateAjaxDisplay();
+            }
+        };
+        xhr.send("expression=" + encodeURIComponent(ajaxCurrent));
+    }
+
+    /* ===== Fetch Calculator ===== */
+    let fetchCurrent = '';
+    function fetchAppend(char) { fetchCurrent += char; updateFetchDisplay(); }
+    function fetchClear() { fetchCurrent = ''; updateFetchDisplay(); }
+    function fetchBack() { fetchCurrent = fetchCurrent.slice(0,-1); updateFetchDisplay(); }
+    function updateFetchDisplay() { document.getElementById('fetchDisplay').innerText = fetchCurrent || '0'; }
+    async function fetchEvaluate() {
+        if (!fetchCurrent) return;
+        let formData = new FormData();
+        formData.append("expression", fetchCurrent);
+        let response = await fetch("/Calculator/EvaluateFetch", { method: "POST", body: formData });
+        let data = await response.json();
+        fetchCurrent = data.result;
+        updateFetchDisplay();
+    }
+</script>
