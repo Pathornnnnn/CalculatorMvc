@@ -8,7 +8,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        background: linear-gradient(135deg, #ff9a9e, #fad0c4, #a18cd1, #fbc2eb); /* ไล่เฉดสีสวยๆ */
+        background: linear-gradient(135deg, #ff9a9e, #fad0c4, #a18cd1, #fbc2eb);
         padding: 20px;
         min-height: 100vh;
         transition: background 0.5s;
@@ -37,18 +37,23 @@
 
     .buttons {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(4, 70px);
+        grid-auto-rows: 70px;
         gap: 10px;
     }
 
     .btn {
-        padding: 20px;
+        width: 70px;
+        height: 70px;
         font-size: 1.5em;
         border: none;
         border-radius: 50%;
         background: #333;
         color: white;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         transition: 0.1s;
     }
 
@@ -56,22 +61,21 @@
             background: orange;
         }
 
-        .btn.double {
-            grid-column: span 2;
-            border-radius: 40px;
-        }
-
         .btn:active {
             transform: scale(0.95);
         }
 
+        .btn.double {
+            grid-column: span 2;
+            border-radius: 35px;
+            width: calc(70px * 2 + 10px);
+        }
+
         .btn.equal {
-            grid-column: span 4; /* ขยายสูง 2 แถว */
-            border-radius: 40px;
-            background: orange;
-            color: white;
-            font-size: 1.5em;
-            justify-content: end;
+            grid-column: span 3;
+            border-radius: 35px;
+            width: calc(70px * 3 + 20px);
+            background-color:orange;
         }
 
     .calculator-title {
@@ -92,7 +96,6 @@
         <button class="btn operator" onclick="ajaxBack()">⌫</button>
         <button class="btn operator" onclick="ajaxAppend('%')">%</button>
         <button class="btn operator" onclick="ajaxAppend('^')">^</button>
-        
 
         <button class="btn" onclick="ajaxAppend('7')">7</button>
         <button class="btn" onclick="ajaxAppend('8')">8</button>
@@ -113,6 +116,7 @@
         <button class="btn" onclick="ajaxAppend('.')">.</button>
         <button class="btn operator" onclick="ajaxAppend('+')">+</button>
         <button class="btn equal" onclick="ajaxEvaluate()">=</button>
+        <button id="ajaxAdvanceBtn" class="btn advance">sin(</button>
     </div>
 </div>
 
@@ -146,23 +150,24 @@
         <button class="btn" onclick="fetchAppend('.')">.</button>
         <button class="btn operator" onclick="fetchAppend('+')">+</button>
         <button class="btn equal" onclick="fetchEvaluate()">=</button>
+        <button id="fetchAdvanceBtn" class="btn advance">sin(</button>
     </div>
 </div>
 
 <script>
-    /* ===== AJAX Calculator ===== */
+    /* ===== AJAX ===== */
     let ajaxCurrent = '';
     function ajaxAppend(char) { ajaxCurrent += char; updateAjaxDisplay(); }
     function ajaxClear() { ajaxCurrent = ''; updateAjaxDisplay(); }
     function ajaxBack() { ajaxCurrent = ajaxCurrent.slice(0,-1); updateAjaxDisplay(); }
     function updateAjaxDisplay() { document.getElementById('ajaxDisplay').innerText = ajaxCurrent || '0'; }
     function ajaxEvaluate() {
-        if (!ajaxCurrent) return;
+        if(!ajaxCurrent) return;
         let xhr = new XMLHttpRequest();
         xhr.open("POST", "/Calculator/EvaluateAjax", true);
         xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-        xhr.onreadystatechange = function() {
-            if(xhr.readyState === 4 && xhr.status === 200){
+        xhr.onreadystatechange = function(){
+            if(xhr.readyState===4 && xhr.status===200){
                 let data = JSON.parse(xhr.responseText);
                 ajaxCurrent = data.result;
                 updateAjaxDisplay();
@@ -171,19 +176,94 @@
         xhr.send("expression=" + encodeURIComponent(ajaxCurrent));
     }
 
-    /* ===== Fetch Calculator ===== */
+    /* ===== Fetch ===== */
     let fetchCurrent = '';
-    function fetchAppend(char) { fetchCurrent += char; updateFetchDisplay(); }
-    function fetchClear() { fetchCurrent = ''; updateFetchDisplay(); }
-    function fetchBack() { fetchCurrent = fetchCurrent.slice(0,-1); updateFetchDisplay(); }
-    function updateFetchDisplay() { document.getElementById('fetchDisplay').innerText = fetchCurrent || '0'; }
-    async function fetchEvaluate() {
-        if (!fetchCurrent) return;
+    function fetchAppend(char){ fetchCurrent+=char; updateFetchDisplay(); }
+    function fetchClear(){ fetchCurrent=''; updateFetchDisplay(); }
+    function fetchBack(){ fetchCurrent=fetchCurrent.slice(0,-1); updateFetchDisplay(); }
+    function updateFetchDisplay(){ document.getElementById('fetchDisplay').innerText = fetchCurrent || '0'; }
+    async function fetchEvaluate(){
+        if(!fetchCurrent) return;
         let formData = new FormData();
         formData.append("expression", fetchCurrent);
-        let response = await fetch("/Calculator/EvaluateFetch", { method: "POST", body: formData });
+        let response = await fetch("/Calculator/EvaluateFetch",{method:"POST",body:formData});
         let data = await response.json();
-        fetchCurrent = data.result;
+        fetchCurrent=data.result;
         updateFetchDisplay();
     }
+
+    /* ===== Advanced Functions ===== */
+    const advancedFuncs = ['sin','cos','tan','log','√','('];
+
+    let ajaxAdvanceIndex = 0;
+    let fetchAdvanceIndex = 0;
+    let ajaxOpenParen = false;
+    let fetchOpenParen = false;
+
+    const ajaxAdvanceBtn = document.getElementById('ajaxAdvanceBtn');
+    const fetchAdvanceBtn = document.getElementById('fetchAdvanceBtn');
+
+    function updateAjaxButtonText(){
+        let func = advancedFuncs[ajaxAdvanceIndex];
+        if(ajaxOpenParen) ajaxAdvanceBtn.innerText = ')';
+        else ajaxAdvanceBtn.innerText = func + (func==='('?'':'(');
+    }
+
+    function updateFetchButtonText(){
+        let func = advancedFuncs[fetchAdvanceIndex];
+        if(fetchOpenParen) fetchAdvanceBtn.innerText = ')';
+        else fetchAdvanceBtn.innerText = func + (func==='('?'':'(');
+    }
+
+    function ajaxAdvanceClick(){
+        let func = advancedFuncs[ajaxAdvanceIndex];
+        if(!ajaxOpenParen){
+            ajaxAppend(func==='('? '(' : func+'(');
+            ajaxOpenParen = true;
+            ajaxAdvanceBtn.innerText = ')';
+        } else {
+            ajaxAppend(')');
+            ajaxOpenParen = false;
+            updateAjaxButtonText();
+        }
+    }
+
+    function fetchAdvanceClick(){
+        let func = advancedFuncs[fetchAdvanceIndex];
+        if(!fetchOpenParen){
+            fetchAppend(func==='('? '(' : func+'(');
+            fetchOpenParen = true;
+            fetchAdvanceBtn.innerText = ')';
+        } else {
+            fetchAppend(')');
+            fetchOpenParen = false;
+            updateFetchButtonText();
+        }
+    }
+
+    ajaxAdvanceBtn.addEventListener('click', ajaxAdvanceClick);
+    fetchAdvanceBtn.addEventListener('click', fetchAdvanceClick);
+
+    /* ===== Key Handling ===== */
+    document.addEventListener('keydown', function(e){
+        // Tab → AJAX
+        if(e.key==='Tab'){
+            e.preventDefault();
+            ajaxAdvanceIndex = (ajaxAdvanceIndex + 1) % advancedFuncs.length;
+            ajaxOpenParen=false;
+            updateAjaxButtonText();
+            ajaxAdvanceBtn.focus();
+        }
+        // Ctrl + Tab → Fetch
+        if(e.ctrlKey){
+            e.preventDefault();
+            fetchAdvanceIndex = (fetchAdvanceIndex + 1) % advancedFuncs.length;
+            fetchOpenParen=false;
+            updateFetchButtonText();
+            fetchAdvanceBtn.focus();
+        }
+    });
+
+    updateAjaxButtonText();
+    updateFetchButtonText();
 </script>

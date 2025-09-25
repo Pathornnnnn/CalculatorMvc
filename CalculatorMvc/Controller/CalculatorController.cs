@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Data;
 using System.Text.RegularExpressions;
 
@@ -21,7 +22,8 @@ public class CalculatorController : Controller
         try
         {
             expr = ProcessSpecialFunctions(expr);
-            double result = EvaluatePower(expr); // คำนวณ ^
+            expr = ReplaceMathFunctions(expr);
+            double result = EvaluatePower(expr); // คำนวณ ^ และ operator
             return result.ToString();
         }
         catch
@@ -42,7 +44,42 @@ public class CalculatorController : Controller
         return expr;
     }
 
-    // ฟังก์ชันคำนวณ ^ (ยกกำลัง)
+    private string ReplaceMathFunctions(string expr)
+    {
+        // sin, cos, tan, log, √
+        expr = Regex.Replace(expr, @"√\(([^)]+)\)", m =>
+        {
+            double val = EvaluatePower(m.Groups[1].Value);
+            return Math.Sqrt(val).ToString();
+        });
+
+        expr = Regex.Replace(expr, @"sin\(([^)]+)\)", m =>
+        {
+            double val = EvaluatePower(m.Groups[1].Value);
+            return Math.Sin(val * Math.PI / 180).ToString(); // ใช้เป็นองศา
+        });
+
+        expr = Regex.Replace(expr, @"cos\(([^)]+)\)", m =>
+        {
+            double val = EvaluatePower(m.Groups[1].Value);
+            return Math.Cos(val * Math.PI / 180).ToString();
+        });
+
+        expr = Regex.Replace(expr, @"tan\(([^)]+)\)", m =>
+        {
+            double val = EvaluatePower(m.Groups[1].Value);
+            return Math.Tan(val * Math.PI / 180).ToString();
+        });
+
+        expr = Regex.Replace(expr, @"log\(([^)]+)\)", m =>
+        {
+            double val = EvaluatePower(m.Groups[1].Value);
+            return Math.Log10(val).ToString();
+        });
+
+        return expr;
+    }
+
     private double EvaluatePower(string expr)
     {
         // ถ้าไม่มี ^ ใช้ DataTable.Compute ปกติ
@@ -55,7 +92,6 @@ public class CalculatorController : Controller
         // ถ้ามี ^ ให้แยก
         while (expr.Contains("^"))
         {
-            // หา pattern "base^exp"
             var match = Regex.Match(expr, @"(\d+(\.\d+)?)\^(\d+(\.\d+)?)");
             if (!match.Success) break;
 
@@ -63,12 +99,10 @@ public class CalculatorController : Controller
             double e = double.Parse(match.Groups[3].Value);
             double pow = Math.Pow(b, e);
 
-            // แทนที่ base^exp ด้วยผลลัพธ์
             expr = expr.Replace(match.Value, pow.ToString());
         }
 
         var dtFinal = new DataTable();
         return Convert.ToDouble(dtFinal.Compute(expr, ""));
     }
-
 }
