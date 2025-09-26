@@ -75,14 +75,39 @@
             grid-column: span 3;
             border-radius: 35px;
             width: calc(70px * 3 + 20px);
-            background-color:orange;
+            background-color: orange;
         }
 
+        .btn.advance {
+            background: #5dade2; /* ฟ้าอมม่วง */
+            color: white; /* ตัวหนังสือตัดชัด */
+            font-weight: bold;
+            border: 2px solid #fff; /* optional เพิ่มขอบขาวบางๆ ให้เด่น */
+            box-shadow: 0 4px 8px rgba(93, 173, 226, 0.5);
+            transition: 0.2s;
+        }
+
+        .btn.advance:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 4px rgba(93, 173, 226, 0.5);
+        }
     .calculator-title {
         color: #000;
         margin-bottom: 5px;
         font-weight: bold;
         text-align: center;
+    }
+
+    .mode-toggle {
+        background: #444;
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 5px 15px;
+        margin: 10px auto;
+        display: block;
+        cursor: pointer;
+        font-weight: bold;
     }
 </style>
 
@@ -90,6 +115,7 @@
 <h1>AJAX Calculator</h1>
 <div class="calculator">
     <div class="calculator-title">AJAX Calculator</div>
+    <button id="ajaxModeBtn" class="mode-toggle">Mode: DEG</button>
     <div id="ajaxDisplay" class="display">0</div>
     <div class="buttons">
         <button class="btn operator" onclick="ajaxClear()">C</button>
@@ -124,6 +150,7 @@
 <h1>Fetch Calculator</h1>
 <div class="calculator">
     <div class="calculator-title">Fetch Calculator</div>
+    <button id="fetchModeBtn" class="mode-toggle">Mode: DEG</button>
     <div id="fetchDisplay" class="display">0</div>
     <div class="buttons">
         <button class="btn operator" onclick="fetchClear()">C</button>
@@ -155,6 +182,23 @@
 </div>
 
 <script>
+    /* ===== Global Mode State ===== */
+    let ajaxMode = "deg";
+    let fetchMode = "deg";
+
+    const ajaxModeBtn = document.getElementById('ajaxModeBtn');
+    const fetchModeBtn = document.getElementById('fetchModeBtn');
+
+    ajaxModeBtn.addEventListener('click', () => {
+        ajaxMode = ajaxMode === "deg" ? "rad" : "deg";
+        ajaxModeBtn.innerText = "Mode: " + ajaxMode.toUpperCase();
+    });
+
+    fetchModeBtn.addEventListener('click', () => {
+        fetchMode = fetchMode === "deg" ? "rad" : "deg";
+        fetchModeBtn.innerText = "Mode: " + fetchMode.toUpperCase();
+    });
+
     /* ===== AJAX ===== */
     let ajaxCurrent = '';
     function ajaxAppend(char) { ajaxCurrent += char; updateAjaxDisplay(); }
@@ -173,7 +217,7 @@
                 updateAjaxDisplay();
             }
         };
-        xhr.send("expression=" + encodeURIComponent(ajaxCurrent));
+        xhr.send("expression=" + encodeURIComponent(ajaxCurrent) + "&mode=" + ajaxMode);
     }
 
     /* ===== Fetch ===== */
@@ -186,6 +230,7 @@
         if(!fetchCurrent) return;
         let formData = new FormData();
         formData.append("expression", fetchCurrent);
+        formData.append("mode", fetchMode);
         let response = await fetch("/Calculator/EvaluateFetch",{method:"POST",body:formData});
         let data = await response.json();
         fetchCurrent=data.result;
@@ -246,7 +291,6 @@
 
     /* ===== Key Handling ===== */
     document.addEventListener('keydown', function(e){
-        // Tab → AJAX
         if(e.key==='Tab'){
             e.preventDefault();
             ajaxAdvanceIndex = (ajaxAdvanceIndex + 1) % advancedFuncs.length;
@@ -254,7 +298,6 @@
             updateAjaxButtonText();
             ajaxAdvanceBtn.focus();
         }
-        // Ctrl + Tab → Fetch
         if(e.ctrlKey){
             e.preventDefault();
             fetchAdvanceIndex = (fetchAdvanceIndex + 1) % advancedFuncs.length;

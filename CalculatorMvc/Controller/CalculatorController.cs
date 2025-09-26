@@ -5,16 +5,28 @@ using System.Text.RegularExpressions;
 
 public class CalculatorController : Controller
 {
+    private static bool UseDegree = true;
+
     [HttpPost]
-    public IActionResult EvaluateAjax([FromForm] string expression)
+    public IActionResult EvaluateAjax([FromForm] string expression, [FromForm] string mode)
     {
+        UpdateMode(mode);
         return Json(new { result = EvaluateExpression(expression) });
     }
 
     [HttpPost]
-    public IActionResult EvaluateFetch([FromForm] string expression)
+    public IActionResult EvaluateFetch([FromForm] string expression, [FromForm] string mode)
     {
+        UpdateMode(mode);
         return Json(new { result = EvaluateExpression(expression) });
+    }
+
+    private void UpdateMode(string mode)
+    {
+        if (!string.IsNullOrEmpty(mode))
+        {
+            UseDegree = mode.Equals("deg", StringComparison.OrdinalIgnoreCase);
+        }
     }
 
     private string EvaluateExpression(string expr)
@@ -23,8 +35,11 @@ public class CalculatorController : Controller
         {
             expr = ProcessSpecialFunctions(expr);
             expr = ReplaceMathFunctions(expr);
-            double result = EvaluatePower(expr); // คำนวณ ^ และ operator
-            return result.ToString();
+            double result = EvaluatePower(expr);
+
+            // ปัดผลลัพธ์ให้สวย (สูงสุด 10 ตำแหน่ง)
+            double rounded = Math.Round(result, 10);
+            return rounded.ToString("0.##########");
         }
         catch
         {
@@ -34,19 +49,16 @@ public class CalculatorController : Controller
 
     private string ProcessSpecialFunctions(string expr)
     {
-        // เปอร์เซ็นต์ 10% → 0.1
         expr = Regex.Replace(expr, @"(\d+(\.\d+)?)%", m =>
         {
             double val = double.Parse(m.Groups[1].Value) / 100.0;
             return val.ToString();
         });
-
         return expr;
     }
 
     private string ReplaceMathFunctions(string expr)
     {
-        // sin, cos, tan, log, √
         expr = Regex.Replace(expr, @"√\(([^)]+)\)", m =>
         {
             double val = EvaluatePower(m.Groups[1].Value);
@@ -56,19 +68,22 @@ public class CalculatorController : Controller
         expr = Regex.Replace(expr, @"sin\(([^)]+)\)", m =>
         {
             double val = EvaluatePower(m.Groups[1].Value);
-            return Math.Sin(val * Math.PI / 180).ToString(); // ใช้เป็นองศา
+            if (UseDegree) val = val * Math.PI / 180;
+            return Math.Sin(val).ToString();
         });
 
         expr = Regex.Replace(expr, @"cos\(([^)]+)\)", m =>
         {
             double val = EvaluatePower(m.Groups[1].Value);
-            return Math.Cos(val * Math.PI / 180).ToString();
+            if (UseDegree) val = val * Math.PI / 180;
+            return Math.Cos(val).ToString();
         });
 
         expr = Regex.Replace(expr, @"tan\(([^)]+)\)", m =>
         {
             double val = EvaluatePower(m.Groups[1].Value);
-            return Math.Tan(val * Math.PI / 180).ToString();
+            if (UseDegree) val = val * Math.PI / 180;
+            return Math.Tan(val).ToString();
         });
 
         expr = Regex.Replace(expr, @"log\(([^)]+)\)", m =>
@@ -82,14 +97,12 @@ public class CalculatorController : Controller
 
     private double EvaluatePower(string expr)
     {
-        // ถ้าไม่มี ^ ใช้ DataTable.Compute ปกติ
         if (!expr.Contains("^"))
         {
             var dt = new DataTable();
             return Convert.ToDouble(dt.Compute(expr, ""));
         }
 
-        // ถ้ามี ^ ให้แยก
         while (expr.Contains("^"))
         {
             var match = Regex.Match(expr, @"(\d+(\.\d+)?)\^(\d+(\.\d+)?)");
