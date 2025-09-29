@@ -5,39 +5,28 @@ using System.Text.RegularExpressions;
 
 public class CalculatorController : Controller
 {
-    private static bool UseDegree = true;
-
     [HttpPost]
     public IActionResult EvaluateAjax([FromForm] string expression, [FromForm] string mode)
     {
-        UpdateMode(mode);
-        return Json(new { result = EvaluateExpression(expression) });
+        return Json(new { result = EvaluateExpression(expression, mode) });
     }
 
     [HttpPost]
     public IActionResult EvaluateFetch([FromForm] string expression, [FromForm] string mode)
     {
-        UpdateMode(mode);
-        return Json(new { result = EvaluateExpression(expression) });
+        return Json(new { result = EvaluateExpression(expression, mode) });
     }
 
-    private void UpdateMode(string mode)
-    {
-        if (!string.IsNullOrEmpty(mode))
-        {
-            UseDegree = mode.Equals("deg", StringComparison.OrdinalIgnoreCase);
-        }
-    }
-
-    private string EvaluateExpression(string expr)
+    private string EvaluateExpression(string expr, string mode)
     {
         try
         {
+            bool useDegree = string.IsNullOrEmpty(mode) || mode.Equals("deg", StringComparison.OrdinalIgnoreCase);
+
             expr = ProcessSpecialFunctions(expr);
-            expr = ReplaceMathFunctions(expr);
+            expr = ReplaceMathFunctions(expr, useDegree);
             double result = EvaluatePower(expr);
 
-            // ปัดผลลัพธ์ให้สวย (สูงสุด 10 ตำแหน่ง)
             double rounded = Math.Round(result, 10);
             return rounded.ToString("0.##########");
         }
@@ -57,7 +46,7 @@ public class CalculatorController : Controller
         return expr;
     }
 
-    private string ReplaceMathFunctions(string expr)
+    private string ReplaceMathFunctions(string expr, bool useDegree)
     {
         expr = Regex.Replace(expr, @"√\(([^)]+)\)", m =>
         {
@@ -68,21 +57,21 @@ public class CalculatorController : Controller
         expr = Regex.Replace(expr, @"sin\(([^)]+)\)", m =>
         {
             double val = EvaluatePower(m.Groups[1].Value);
-            if (UseDegree) val = val * Math.PI / 180;
+            if (useDegree) val = val * Math.PI / 180;
             return Math.Sin(val).ToString();
         });
 
         expr = Regex.Replace(expr, @"cos\(([^)]+)\)", m =>
         {
             double val = EvaluatePower(m.Groups[1].Value);
-            if (UseDegree) val = val * Math.PI / 180;
+            if (useDegree) val = val * Math.PI / 180;
             return Math.Cos(val).ToString();
         });
 
         expr = Regex.Replace(expr, @"tan\(([^)]+)\)", m =>
         {
             double val = EvaluatePower(m.Groups[1].Value);
-            if (UseDegree) val = val * Math.PI / 180;
+            if (useDegree) val = val * Math.PI / 180;
             return Math.Tan(val).ToString();
         });
 
